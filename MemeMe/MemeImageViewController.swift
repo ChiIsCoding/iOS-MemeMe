@@ -15,19 +15,9 @@ class MemeImageViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        // single image view that displays the memed image
-        let memeImageView = UIImageView()
         if let meme = self.meme {
-            memeImageView.image = meme.memedImage
+            self.view = UIImageView(image: meme.memedImage)
         }
-        memeImageView.translatesAutoresizingMaskIntoConstraints = false
-        self.view.addSubview(memeImageView)
-        
-        let horizontalConstraint = memeImageView.centerXAnchor.constraintEqualToAnchor(self.view.centerXAnchor)
-        let verticalConstraint = memeImageView.centerYAnchor.constraintEqualToAnchor(self.view.centerYAnchor)
-        let heightConstraint = memeImageView.heightAnchor.constraintLessThanOrEqualToAnchor(view.heightAnchor)
-        let widthConstraint = memeImageView.widthAnchor.constraintLessThanOrEqualToAnchor(view.widthAnchor)
-        NSLayoutConstraint.activateConstraints([horizontalConstraint, verticalConstraint, heightConstraint, widthConstraint])
         
     }
 }

@@ -12,10 +12,8 @@ private let reuseIdentifier = "memeCollectionCell"
 
 class SentMemesCollectionViewController: UICollectionViewController {
     
-    // extract shared meme data from AppDelegate
-    var memes: [Meme] {
-        return (UIApplication.sharedApplication().delegate as! AppDelegate).memes
-    }
+    // access the singleton sent memes list
+    let memes = SentMemes.sharedInstance
     
     // initialize collection view controller with collectionViewLayout
     init() {
@@ -65,7 +63,6 @@ class SentMemesCollectionViewController: UICollectionViewController {
         if let collectionView = self.collectionView {
             collectionView.reloadData()
         }
-        //        self.collectionView!.reloadData()
     }
     
     // implement protocal function: show meme image in collection view cells
@@ -73,7 +70,7 @@ class SentMemesCollectionViewController: UICollectionViewController {
         
         let cell = collectionView.dequeueReusableCellWithReuseIdentifier(reuseIdentifier, forIndexPath: indexPath)
         
-        let meme = memes[indexPath.item]
+        let meme = memes.memeAtIndex(indexPath.row)
         let imageView = UIImageView(image: meme.memedImage)
         cell.backgroundView = imageView
         
@@ -86,7 +83,7 @@ class SentMemesCollectionViewController: UICollectionViewController {
         
         let memeImageViewController = MemeImageViewController()
         // pass a meme object to the MemeImageViewController
-        memeImageViewController.meme = memes[indexPath.row]
+        memeImageViewController.meme = memes.memeAtIndex(indexPath.row)
         
         if let navigationController = self.navigationController {
             navigationController.pushViewController(memeImageViewController, animated: true)
@@ -96,7 +93,7 @@ class SentMemesCollectionViewController: UICollectionViewController {
     
     // number of memes
     override func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return memes.count
+        return memes.numberOfMemes()
     }
     
     

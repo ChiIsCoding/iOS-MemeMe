@@ -12,10 +12,8 @@ private let reuseIdentifier = "memeTableCell"
 
 class SentMemesTableViewController: UITableViewController {
     
-    // extract [Meme] shared meme data from AppDelegate
-    var memes: [Meme] {
-        return (UIApplication.sharedApplication().delegate as! AppDelegate).memes
-    }
+    // access the singleton sent memes list
+    let memes = SentMemes.sharedInstance
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -40,13 +38,13 @@ class SentMemesTableViewController: UITableViewController {
     
     // implement table view controller protocol functions
     override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return memes.count
+        return memes.numberOfMemes()
     }
     
     override func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
         
         let memeImageViewController = MemeImageViewController()
-        memeImageViewController.meme = memes[indexPath.row]
+        memeImageViewController.meme = memes.memeAtIndex(indexPath.row)
         
         self.navigationController?.pushViewController(memeImageViewController, animated: true)
         
@@ -57,7 +55,7 @@ class SentMemesTableViewController: UITableViewController {
         // dequeue a reusable cell
         let cell = tableView.dequeueReusableCellWithIdentifier(reuseIdentifier)! as UITableViewCell
         
-        let meme = memes[indexPath.row]
+        let meme = memes.memeAtIndex(indexPath.row)
         
         // set cell name and image
         cell.textLabel?.text = meme.topText + " " + meme.bottomText
@@ -68,7 +66,7 @@ class SentMemesTableViewController: UITableViewController {
     }
     
     
-    // Create new meme
+    // Create new meme when click create button
     func createNewMeme() {
         let createNewMemeVC = EditMemeViewController()
         presentViewController(createNewMemeVC, animated: true, completion: nil)
