@@ -29,13 +29,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Set table view of sent memes
         let sentMemesTableVC = SentMemesTableViewController()
         let sentMemesTableNavigationController = UINavigationController(rootViewController: sentMemesTableVC)
-        sentMemesTableNavigationController.tabBarItem = UITabBarItem(title: "Table View",image: nil,tag: 1)
+        sentMemesTableNavigationController.tabBarItem = UITabBarItem(title: "Table View", image: nil, tag: 1)
         sentMemesTableNavigationController.tabBarItem.setTitleTextAttributes(tabBarItemAttributes, forState: .Normal)
 
         // Set collection view of sent memes
         let sentMemesCollectionVC = SentMemesCollectionViewController()
         let sentMemesCollectionNavigationController = UINavigationController(rootViewController: sentMemesCollectionVC)
-        sentMemesCollectionNavigationController.tabBarItem = UITabBarItem(title: "Collection View", image: nil, tag:2)
+        sentMemesCollectionNavigationController.tabBarItem = UITabBarItem(title: "Collection View", image: nil, tag: 2)
         sentMemesCollectionNavigationController.tabBarItem.setTitleTextAttributes(tabBarItemAttributes, forState: .Normal)
         
         tabBarController.viewControllers = [sentMemesTableNavigationController, sentMemesCollectionNavigationController]

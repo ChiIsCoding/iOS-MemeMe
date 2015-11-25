@@ -9,17 +9,14 @@
 import UIKit
 
 // Delegate to pass user interaction to view controller
-protocol EditMemeDelegate: UITextFieldDelegate, UIImagePickerControllerDelegate {
+protocol EditMemeDelegate: class {
     func uploadEditedMeme();
     func cancelEditedMeme();
     func pickAnImage(type: UIImagePickerControllerSourceType);
-    func textFieldDidBeginEditing(textField: UITextField);
-    func textFieldShouldReturn(textField: UITextField) -> Bool;
-    func imagePickerController(picker: UIImagePickerController, didFinishPickingImage image: UIImage, editingInfo: [String : AnyObject]?);
 }
 
 
-class EditMemeView: UIView {
+class EditMemeView: UIView, UITextFieldDelegate {
     
     lazy var topTextField = UITextField()
     lazy var bottomTextField = UITextField()
@@ -29,26 +26,26 @@ class EditMemeView: UIView {
     
     var tapRecognizer: UITapGestureRecognizer?
     
-    var delegate: EditMemeDelegate?
+    weak var delegate: EditMemeDelegate?
     
     // status of upload button (enabled / disabled)
-    enum UploadButtonEnabled {
+    enum UploadButtonState {
         case Disabled
         case Enabled
     }
     
     // status of uploadButton
-    var uploadButtonStatus: UploadButtonEnabled = UploadButtonEnabled.Disabled {
+    var uploadButtonState: UploadButtonState = UploadButtonState.Disabled {
         didSet {
-            setUploadButton()
+            updateUploadButtonState()
         }
     }
     
     // set UI status of upload button
-    private func setUploadButton() {
+    private func updateUploadButtonState() {
         if let items = self.navBar.items {
             let startIndex = items.startIndex
-            switch uploadButtonStatus {
+            switch uploadButtonState {
             case .Disabled:
                 items[startIndex].enabled = false
             case .Enabled:
@@ -59,19 +56,19 @@ class EditMemeView: UIView {
     
     
     // Enum determine whether top bar and bottom bar are displayed
-    enum TopBottomBarStatus {
+    enum TopBottomBarState {
         case Hidden;
         case Displayed;
     }
     
-    var topBottomBarDisplay: TopBottomBarStatus = TopBottomBarStatus.Displayed {
+    var topBottomBarState: TopBottomBarState = TopBottomBarState.Displayed {
         didSet{
-            setBarStatus()
+            updateTopBottomBarState()
         }
     }
     
-    private func setBarStatus() {
-        switch topBottomBarDisplay {
+    private func updateTopBottomBarState() {
+        switch topBottomBarState {
         case .Displayed:
             self.navBar.hidden = false
             self.toolBar.hidden = false
@@ -94,98 +91,22 @@ class EditMemeView: UIView {
     // initialize custome view
     override init(frame: CGRect) {
         super.init(frame: frame)
-        backgroundColor = UIColor.whiteColor()
         
-        // Set image view
-        pickedImage.translatesAutoresizingMaskIntoConstraints = false
-        self.addSubview(pickedImage)
-        // Set image constraints
-        let pickedImageHorizontalConstraint = pickedImage.centerXAnchor.constraintEqualToAnchor(self.centerXAnchor)
-        let pickedImageVerticalConstraint = pickedImage.centerYAnchor.constraintEqualToAnchor(self.centerYAnchor)
-        let pickedImageHeightConstraint = pickedImage.heightAnchor.constraintLessThanOrEqualToAnchor(self.heightAnchor)
-        let pickedImageWidthConstraint = pickedImage.widthAnchor.constraintLessThanOrEqualToAnchor(self.widthAnchor)
-        NSLayoutConstraint.activateConstraints([pickedImageHorizontalConstraint, pickedImageVerticalConstraint, pickedImageHeightConstraint, pickedImageWidthConstraint])
+        // Initialize UI components
+        self.setUpAppearance()  // bg color
+        self.setUpImageView()
+        self.setUpTopToolBar()
+        self.setUpBottomToolBar()
+        self.setUpTopTextField()
+        self.setUpBottomTextField()
         
-        
-        // Add tool bar at the top
-        navBar = UIToolbar()
-        navBar.backgroundColor = UIColor.blueColor()
-        navBar.translatesAutoresizingMaskIntoConstraints = false
-        self.addSubview(navBar)
-        // Set tool bar constraints
-        let navBarWidthConstraint = navBar.widthAnchor.constraintEqualToAnchor(self.widthAnchor)
-        let navBarHeightConstraint = navBar.heightAnchor.constraintEqualToAnchor(nil, constant: 50)
-        let navBarVerticalConstraint = navBar.topAnchor.constraintEqualToAnchor(self.topAnchor)
-        NSLayoutConstraint.activateConstraints([navBarWidthConstraint, navBarHeightConstraint, navBarVerticalConstraint])
-        // add upload button and cancel button on nav bar
-        let uploadButton = UIBarButtonItem(title: "Upload", style: .Done, target: self, action: "uploadMeme")
-        let cancelButton = UIBarButtonItem(title: "Cancel", style: .Done, target: self, action: "cancelMeme")
-        let navFlexibleSpace = UIBarButtonItem(barButtonSystemItem: .FlexibleSpace, target: nil, action: nil);
-        navBar.items = [uploadButton, navFlexibleSpace, cancelButton]
-
-        
-        // Add bottom tool bar
-        toolBar = UIToolbar()
-        toolBar.backgroundColor = UIColor.blueColor()
-        toolBar.translatesAutoresizingMaskIntoConstraints = false
-        self.addSubview(toolBar)
-        // Set bottom tool bar constraints
-        let toolBarWidthConstraint = toolBar.widthAnchor.constraintEqualToAnchor(self.widthAnchor)
-        let toolBarHeightConstraint = toolBar.heightAnchor.constraintEqualToAnchor(nil, constant: 50)
-        let toolBarVerticalConstraint = toolBar.bottomAnchor.constraintEqualToAnchor(self.bottomAnchor)
-        NSLayoutConstraint.activateConstraints([toolBarWidthConstraint, toolBarHeightConstraint, toolBarVerticalConstraint])
-        // add picking image from album and camera buttons on tool bar
-        let albumButton = UIBarButtonItem(title: "Album", style: .Done, target: self, action: "pickAlbumImage")
-        let cameraButton = UIBarButtonItem(title: "Camera", style: .Done, target: self, action: "pickCameraImage")
-        // disable camera button if camera not available
-        cameraButton.enabled = UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.Camera)
-        let toolFlexibleSpace = UIBarButtonItem(barButtonSystemItem: .FlexibleSpace, target: nil, action: nil);
-        toolBar.items = [albumButton, toolFlexibleSpace, cameraButton]
-        
-        
-        // Add top text field
-        topTextField.translatesAutoresizingMaskIntoConstraints = false
-        topTextField.defaultTextAttributes = memeEditTextAttributes
-        topTextField.textAlignment = NSTextAlignment.Center
-        topTextField.adjustsFontSizeToFitWidth = true
-        topTextField.autocapitalizationType = UITextAutocapitalizationType.AllCharacters
-        topTextField.placeholder = "TOP"
-        self.addSubview(topTextField)
-        // Set top text field contraint
-        let topTFHorizontalConstraint = topTextField.centerXAnchor.constraintEqualToAnchor(self.centerXAnchor)
-        let topTFVerticalConstraint = topTextField.topAnchor.constraintGreaterThanOrEqualToAnchor(self.navBar.bottomAnchor, constant: 20)
-        let topTFWidthConstraint = topTextField.widthAnchor.constraintEqualToAnchor(self.widthAnchor, constant: -10)
-        NSLayoutConstraint.activateConstraints([topTFHorizontalConstraint, topTFVerticalConstraint, topTFWidthConstraint])
-        
-        
-        // Set bottom text field
-        bottomTextField.translatesAutoresizingMaskIntoConstraints = false
-        bottomTextField.defaultTextAttributes = memeEditTextAttributes
-        bottomTextField.textAlignment = NSTextAlignment.Center
-        bottomTextField.adjustsFontSizeToFitWidth = true
-        bottomTextField.autocapitalizationType = UITextAutocapitalizationType.AllCharacters
-        bottomTextField.placeholder = "BOTTOM"
-        self.addSubview(bottomTextField)
-        // Set bottom text field contraints
-        let bottomTFHorizontalConstraint = bottomTextField.centerXAnchor.constraintEqualToAnchor(self.centerXAnchor)
-        let bottomTFVerticalConstraint = bottomTextField.bottomAnchor.constraintGreaterThanOrEqualToAnchor(self.toolBar.topAnchor, constant: -20)
-        let bottomTFWidthConstraint = bottomTextField.widthAnchor.constraintEqualToAnchor(self.widthAnchor, constant: -10)
-        NSLayoutConstraint.activateConstraints([bottomTFHorizontalConstraint, bottomTFVerticalConstraint, bottomTFWidthConstraint])
-        
-        // Initialize tap recognizer to handle tap to resign keyboard
-        tapRecognizer = UITapGestureRecognizer(target: self, action: "handleSingleTap:")
-        tapRecognizer?.numberOfTapsRequired = 1
+        // Initialize tap recognizer to handle user tap
+        self.setUpTapRecognizer()
 
     }
-
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-    
-    // functino to handle single tap
-    func handleSingleTap(recognizer: UITapGestureRecognizer) {
-        self.endEditing(true)
     }
     
     
@@ -241,6 +162,18 @@ class EditMemeView: UIView {
         }
     }
     
+    // MARK - Text Field Delegate Implementation
+    func textFieldDidBeginEditing(textField: UITextField) {
+        textField.placeholder = nil
+    }
+    
+    func textFieldShouldReturn(textField: UITextField) -> Bool {
+        textField.resignFirstResponder()
+        return true
+    }
+    
+    
+    // Dismiss visible keyboard
     private func dismissAnyVisibleKeyboards() {
         if topTextField.isFirstResponder() || bottomTextField.isFirstResponder() {
             self.endEditing(true)
@@ -248,23 +181,144 @@ class EditMemeView: UIView {
     }
     
     
-    // check and update status when view will appear
-    func viewWillAppearCheck() {
+    // reset text field place holder
+    func resetTextFieldPlacehoder() {
         self.topTextField.placeholder = "TOP"
         self.bottomTextField.placeholder = "BOTTOM"
+    }
+    
+    // determine upload button state depending on whether there is image ready
+    func updateUploadButtonStateWithImageState() {
         if let _ = self.pickedImage.image {
-            uploadButtonStatus = UploadButtonEnabled.Enabled
+            uploadButtonState = UploadButtonState.Enabled
         } else {
-            uploadButtonStatus = UploadButtonEnabled.Disabled
+            uploadButtonState = UploadButtonState.Disabled
         }
+    }
+    
+    // add gesture recogizaer for tap
+    func addTapRecognizer() {
         self.addGestureRecognizer(tapRecognizer!)
     }
     
-    
     // remove gesture recognizer when view disappears
-    func viewWillDisappearCheck() {
+    func removeTapRecognizer() {
         self.removeGestureRecognizer(tapRecognizer!)
     }
+    
+    // Generate image from screen
+    func generateImage() -> UIImage {
+        // Render view to an image
+        UIGraphicsBeginImageContext(self.frame.size)
+        self.drawViewHierarchyInRect(self.frame, afterScreenUpdates: true)
+        let image: UIImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        return image
+    }
+    
+    
+    // MARK: - Set up UI components
+    
+    private func setUpAppearance() {
+        self.backgroundColor = UIColor.whiteColor()
+    }
+    
+    private func setUpImageView() {
+        // Add image view
+        pickedImage.translatesAutoresizingMaskIntoConstraints = false
+        self.addSubview(pickedImage)
+        // Set image view constraints
+        let pickedImageHorizontalConstraint = pickedImage.centerXAnchor.constraintEqualToAnchor(self.centerXAnchor)
+        let pickedImageVerticalConstraint = pickedImage.centerYAnchor.constraintEqualToAnchor(self.centerYAnchor)
+        let pickedImageHeightConstraint = pickedImage.heightAnchor.constraintLessThanOrEqualToAnchor(self.heightAnchor)
+        let pickedImageWidthConstraint = pickedImage.widthAnchor.constraintLessThanOrEqualToAnchor(self.widthAnchor)
+        NSLayoutConstraint.activateConstraints([pickedImageHorizontalConstraint, pickedImageVerticalConstraint, pickedImageHeightConstraint, pickedImageWidthConstraint])
+    }
+    
+    private func setUpTopToolBar() {
+        // Add tool bar at the top
+        navBar = UIToolbar()
+        navBar.backgroundColor = UIColor.blueColor()
+        navBar.translatesAutoresizingMaskIntoConstraints = false
+        self.addSubview(navBar)
+        // Set tool bar constraints
+        let navBarWidthConstraint = navBar.widthAnchor.constraintEqualToAnchor(self.widthAnchor)
+        let navBarHeightConstraint = navBar.heightAnchor.constraintEqualToAnchor(nil, constant: 50)
+        let navBarVerticalConstraint = navBar.topAnchor.constraintEqualToAnchor(self.topAnchor)
+        NSLayoutConstraint.activateConstraints([navBarWidthConstraint, navBarHeightConstraint, navBarVerticalConstraint])
+        // add upload button and cancel button on nav bar
+        let uploadButton = UIBarButtonItem(title: "Upload", style: .Done, target: self, action: "uploadMeme")
+        let cancelButton = UIBarButtonItem(title: "Cancel", style: .Done, target: self, action: "cancelMeme")
+        let navFlexibleSpace = UIBarButtonItem(barButtonSystemItem: .FlexibleSpace, target: nil, action: nil);
+        navBar.items = [uploadButton, navFlexibleSpace, cancelButton]
+    }
+    
+    private func setUpBottomToolBar() {
+        // Add bottom tool bar
+        toolBar = UIToolbar()
+        toolBar.backgroundColor = UIColor.blueColor()
+        toolBar.translatesAutoresizingMaskIntoConstraints = false
+        self.addSubview(toolBar)
+        // Set bottom tool bar constraints
+        let toolBarWidthConstraint = toolBar.widthAnchor.constraintEqualToAnchor(self.widthAnchor)
+        let toolBarHeightConstraint = toolBar.heightAnchor.constraintEqualToAnchor(nil, constant: 50)
+        let toolBarVerticalConstraint = toolBar.bottomAnchor.constraintEqualToAnchor(self.bottomAnchor)
+        NSLayoutConstraint.activateConstraints([toolBarWidthConstraint, toolBarHeightConstraint, toolBarVerticalConstraint])
+        // add picking image from album and camera buttons on tool bar
+        let albumButton = UIBarButtonItem(title: "Album", style: .Done, target: self, action: "pickAlbumImage")
+        let cameraButton = UIBarButtonItem(title: "Camera", style: .Done, target: self, action: "pickCameraImage")
+        // disable camera button if camera not available
+        cameraButton.enabled = UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.Camera)
+        let toolFlexibleSpace = UIBarButtonItem(barButtonSystemItem: .FlexibleSpace, target: nil, action: nil);
+        toolBar.items = [albumButton, toolFlexibleSpace, cameraButton]
+    }
+    
+    private func setUpTopTextField() {
+        // Add top text field
+        topTextField.translatesAutoresizingMaskIntoConstraints = false
+        topTextField.defaultTextAttributes = memeEditTextAttributes
+        topTextField.textAlignment = NSTextAlignment.Center
+        topTextField.adjustsFontSizeToFitWidth = true
+        topTextField.autocapitalizationType = UITextAutocapitalizationType.AllCharacters
+        topTextField.placeholder = "TOP"
+        topTextField.delegate = self
+        self.addSubview(topTextField)
+        // Set top text field contraint
+        let topTFHorizontalConstraint = topTextField.centerXAnchor.constraintEqualToAnchor(self.centerXAnchor)
+        let topTFVerticalConstraint = topTextField.topAnchor.constraintGreaterThanOrEqualToAnchor(self.navBar.bottomAnchor, constant: 20)
+        let topTFWidthConstraint = topTextField.widthAnchor.constraintEqualToAnchor(self.widthAnchor, constant: -10)
+        NSLayoutConstraint.activateConstraints([topTFHorizontalConstraint, topTFVerticalConstraint, topTFWidthConstraint])
+    }
+    
+    private func setUpBottomTextField() {
+        // Set bottom text field
+        bottomTextField.translatesAutoresizingMaskIntoConstraints = false
+        bottomTextField.defaultTextAttributes = memeEditTextAttributes
+        bottomTextField.textAlignment = NSTextAlignment.Center
+        bottomTextField.adjustsFontSizeToFitWidth = true
+        bottomTextField.autocapitalizationType = UITextAutocapitalizationType.AllCharacters
+        bottomTextField.placeholder = "BOTTOM"
+        bottomTextField.delegate = self
+        self.addSubview(bottomTextField)
+        // Set bottom text field contraints
+        let bottomTFHorizontalConstraint = bottomTextField.centerXAnchor.constraintEqualToAnchor(self.centerXAnchor)
+        let bottomTFVerticalConstraint = bottomTextField.bottomAnchor.constraintGreaterThanOrEqualToAnchor(self.toolBar.topAnchor, constant: -20)
+        let bottomTFWidthConstraint = bottomTextField.widthAnchor.constraintEqualToAnchor(self.widthAnchor, constant: -10)
+        NSLayoutConstraint.activateConstraints([bottomTFHorizontalConstraint, bottomTFVerticalConstraint, bottomTFWidthConstraint])
+    }
+    
+    // set up tap recognizer
+    private func setUpTapRecognizer() {
+        tapRecognizer = UITapGestureRecognizer(target: self, action: "handleSingleTap:")
+        tapRecognizer?.numberOfTapsRequired = 1
+    }
+    
+    // functino to handle single tap
+    func handleSingleTap(recognizer: UITapGestureRecognizer) {
+        self.endEditing(true)
+    }
+    
 
 }
 

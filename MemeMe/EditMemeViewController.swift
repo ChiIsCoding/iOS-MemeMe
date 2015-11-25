@@ -8,10 +8,10 @@
 
 import UIKit
 
-class EditMemeViewController: UIViewController, UINavigationControllerDelegate, EditMemeDelegate {
+class EditMemeViewController: UIViewController, UINavigationControllerDelegate, EditMemeDelegate, UIImagePickerControllerDelegate {
     
     // Singleton instance of saved Memes
-    private let sentMemes = SentMemes.sharedInstance
+    private var sentMemes = SentMemes.sharedInstance
     
     // initialize editMemeView which cast self.view to EditMemeView
     private var editMemeView: EditMemeView! { return self.view as! EditMemeView }
@@ -25,13 +25,13 @@ class EditMemeViewController: UIViewController, UINavigationControllerDelegate, 
         
         // Set Delegates
         self.editMemeView.delegate = self
-        self.editMemeView.topTextField.delegate = self
-        self.editMemeView.bottomTextField.delegate = self
         
         self.subscribeToKeyboardNotifications()
         
         // some more checkings in view before view appears
-        self.editMemeView.viewWillAppearCheck()
+        self.editMemeView.resetTextFieldPlacehoder()
+        self.editMemeView.updateUploadButtonStateWithImageState()
+        self.editMemeView.addTapRecognizer()
     }
     
     override func viewWillDisappear(animated: Bool) {
@@ -39,17 +39,15 @@ class EditMemeViewController: UIViewController, UINavigationControllerDelegate, 
         
         // set delegates to nil
         self.editMemeView.delegate = nil
-        self.editMemeView.topTextField.delegate = nil
-        self.editMemeView.bottomTextField.delegate = nil
         
         self.unsubscribeToKeyboardNotifications()
         
         // some checking of view before view disappears
-        self.editMemeView.viewWillDisappearCheck()
+        self.editMemeView.removeTapRecognizer()
     }
     
     
-    // Implemente Delegates Methods
+    // Implemente EditMemeDelegate Methods
     // Delegate method: upload edited Meme (to save or share)
     func uploadEditedMeme() {
         let memedImage = generateMemedImage()
@@ -86,16 +84,6 @@ class EditMemeViewController: UIViewController, UINavigationControllerDelegate, 
         self.presentViewController(imagePicker, animated: true, completion: nil)
     }
     
-    // Delegate method: clear placeholder once start editing
-    func textFieldDidBeginEditing(textField: UITextField) {
-        textField.placeholder = nil
-    }
-    
-    // Delegate method: resign first responder if hit return
-    func textFieldShouldReturn(textField: UITextField) -> Bool {
-        textField.resignFirstResponder()
-        return true
-    }
     
     // Delegate method: implement UIImagePickerControllerDelegate function didFinishPickingImage
     func imagePickerController(picker: UIImagePickerController, didFinishPickingImage image: UIImage, editingInfo: [String : AnyObject]?) {
@@ -144,25 +132,15 @@ class EditMemeViewController: UIViewController, UINavigationControllerDelegate, 
     // Generate Memed Image
     private func generateMemedImage() -> UIImage {
         // Hide tool bar and nav bar
-        self.editMemeView.topBottomBarDisplay = EditMemeView.TopBottomBarStatus.Hidden
+        self.editMemeView.topBottomBarState = EditMemeView.TopBottomBarState.Hidden
         // Generate image from screen
-        let memedImage: UIImage = generateImage()
+        let memedImage: UIImage = self.editMemeView.generateImage()
         // Show tool bar and nav bar
-        self.editMemeView.topBottomBarDisplay = EditMemeView.TopBottomBarStatus.Displayed
+        self.editMemeView.topBottomBarState = EditMemeView.TopBottomBarState.Displayed
         
         return memedImage
     }
     
-    // Generate image
-    private func generateImage() -> UIImage {
-        // Render view to an image
-        UIGraphicsBeginImageContext(self.view.frame.size)
-        self.view.drawViewHierarchyInRect(self.view.frame, afterScreenUpdates: true)
-        let image: UIImage = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        
-        return image
-    }
     
     // Create and save new Meme
     private func save(topText: String, bottomText: String, image: UIImage, memedImage: UIImage) {
